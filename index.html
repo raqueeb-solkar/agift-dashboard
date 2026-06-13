@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00b894">
+<meta name="mobile-web-app-capable" content="yes"> 
 <title>A Gift — Supplier Dashboard</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
@@ -1091,6 +1094,13 @@ renderSales();
 filterExp('all');
 updateDashboard();
 updateSettlementBar();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register(
+    '/agift-dashboard/sw.js'
+  );
+}
 </script>
 </body>
 </html>
