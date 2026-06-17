@@ -660,6 +660,7 @@ function onSaleEdit(gIdx){
   // update live footer totals
   updateSalesFooter();
   updateSalesSummary();
+  updatePendingBadge();
 }
 
 function updateSalesFooter(){
@@ -904,6 +905,8 @@ function updateSettlementBar(){
   document.getElementById('sett-neg-saving').textContent=sav>0?fmt(sav):'₹0';
   // update db
   document.getElementById('db-total').textContent=fmt(grand);
+  // update pending badge live
+  updatePendingBadge();
 }
 
 // ── DASHBOARD BREAKDOWN ──
@@ -971,8 +974,57 @@ function updateDashboard(){
 }
 
 // ── SETTLEMENT PAGE ──
+function getLiveSalesTotal(){
+  let tot=0;
+  SALES.forEach((r,gIdx)=>{
+    const qInp=document.getElementById(`sale-qty-inp-${gIdx}`);
+    const rInp=document.getElementById(`sale-rate-inp-${gIdx}`);
+    const q=qInp?(parseFloat(qInp.value)||0):r.qty;
+    const rate=rInp?(parseFloat(rInp.value)||0):r.rate;
+    tot+=q*rate;
+  });
+  return tot;
+}
+
+function updatePendingBadge(){
+  const totalSales=getLiveSalesTotal();
+  const cats=['Online','Petrol','Waqti','Bangda','Ice','Other'];
+  const fixedAmts={Online:650000,Petrol:301500,Ice:15450};
+  let totalPaid=0;
+  cats.forEach(c=>{
+    let amt=0;
+    if(fixedAmts[c]){amt=fixedAmts[c];}
+    else{
+      EXPENSES.filter(r=>r.cat===c).forEach(r=>{
+        const idx=EXPENSES.indexOf(r);
+        const nk=`${c}-${idx}`;
+        const nr=NEG_RATES[nk]!==undefined?NEG_RATES[nk]:r.rate;
+        amt+=r.qty*nr;
+      });
+    }
+    totalPaid+=amt;
+  });
+  const pending=totalSales-totalPaid;
+  const badge=document.querySelector('.badge-pending');
+  if(badge){
+    badge.textContent=pending>0?`⚠ Pending ${fmt(pending)}`:`✅ Excess ${fmt(Math.abs(pending))}`;
+    badge.style.background=pending>0?'var(--rose-bg)':'var(--green-bg)';
+    badge.style.borderColor=pending>0?'var(--rose)':'var(--green)';
+    badge.style.color=pending>0?'var(--rose)':'var(--green)';
+  }
+  // also update settlement balance if visible
+  const sb=document.getElementById('sett-balance');
+  if(sb){
+    sb.textContent=fmt(Math.abs(pending));
+    sb.style.color=pending>0?'var(--rose)':'var(--green)';
+  }
+  const fl=document.getElementById('sett-final-row');
+  if(fl)fl.querySelector('span:first-child').textContent=pending>0?'⚠ Balance Pending':'✅ Overpaid';
+  return {totalSales, totalPaid, pending};
+}
+
 function renderSettlement(){
-  const totalSales=SALES.reduce((s,r)=>s+r.qty*r.rate,0);
+  const totalSales=getLiveSalesTotal();
   const rr=document.getElementById('sett-revenue-rows');
   rr.innerHTML=`
     <div style="display:flex;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);">
@@ -1008,6 +1060,8 @@ function renderSettlement(){
   document.getElementById('sett-balance').textContent=fmt(Math.abs(pending));
   document.getElementById('sett-balance').style.color=pending>0?'var(--rose)':'var(--green)';
   document.getElementById('sett-final-row').querySelector('span:first-child').textContent=pending>0?'⚠ Balance Pending':'✅ Overpaid';
+  // also update topbar badge
+  updatePendingBadge();
 }
 
 // ── MODAL ──
